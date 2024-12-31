@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Portfolio Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <spam>👤 Jeshan</spam>
+            <div class="logo"><p></p></div>
+            <a href="#" id="logoutLink">Logout</a>
+        </nav>
+
+        <div class="profit-loss" id="profitLoss">
+            Profit/Loss: Rs<span id="profitLossValue">0.00</span>
+        </div>
+
+        <main>
+            <div class="input-section">
+                <input type="text" id="stockName" placeholder="Stock Name">
+                <input type="number" id="stockPrice" placeholder="Stock Price">
+                <input type="number" id="stockQuantity" placeholder="Stock Quantity">
+                <input type="number" id="buyPrice" placeholder="Buy Price">
+                <button id="addStockButton">Add Stock</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Stock Name</th>
+                        <th>Stock Price</th>
+                        <th>Stock Quantity</th>
+                        <th>Buy Price</th>
+                        <th>Total Value</th>
+                        <th>WACC</th>
+                        <th>Gain/Loss</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                </tbody>
+            </table>
+            
+            <div class="portfolio-value">
+                Total Portfolio Value: Rs<span id="portfolioValue">0.00</span>
+            </div>
+        </main>
+    </div>
+
+    <script >
+       document.addEventListener('DOMContentLoaded', () => {
+    const stockTableBody = document.getElementById('stockTableBody');
+    const addStockButton = document.getElementById('addStockButton');
+    const portfolioValueElement = document.getElementById('portfolioValue');
+    const profitLossElement = document.getElementById('profitLossValue');
+    const profitLossDiv = document.getElementById('profitLoss');
+
+    let stockCount = 0;
+    let portfolioValue = 0;
+    let totalWACC = 0;
+
+    addStockButton.addEventListener('click', () => {
+        const stockName = document.getElementById('stockName').value;
+        const stockPrice = parseFloat(document.getElementById('stockPrice').value);
+        const stockQuantity = parseInt(document.getElementById('stockQuantity').value);
+        const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+
+        if (stockName && stockPrice && stockQuantity && buyPrice) {
+            stockCount++;
+
+            const totalValue = stockPrice * stockQuantity;
+            const WACC = buyPrice * stockQuantity;
+            const gainLoss = totalValue-WACC;
+            const gainLossPercentage = ((gainLoss / WACC) * 100).toFixed(2);
+
+            portfolioValue += totalValue;
+            totalWACC += WACC;
+            updatePortfolioValue();
+            updateProfitLoss();
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${stockCount}</td>
+                <td>${stockName}</td>
+                <td>${stockPrice.toFixed(2)}</td>
+                <td>${stockQuantity}</td>
+                <td>Rs${buyPrice.toFixed(2)}</td>
+                <td>Rs${totalValue.toFixed(2)}</td>
+                <td>Rs${WACC.toFixed(2)}</td>
+                <td class="gain-loss">${gainLoss.toFixed(2)} (${gainLossPercentage}%)</td>
+                <td>
+                    <button class="editStockButton">Edit</button>
+                    <button class="deleteStockButton">Delete</button>
+                </td>
+            `;
+            stockTableBody.appendChild(row);
+
+            document.getElementById('stockName').value = '';
+            document.getElementById('stockPrice').value = '';
+            document.getElementById('stockQuantity').value = '';
+            document.getElementById('buyPrice').value = '';
+
+            updateGainLossColor(row.querySelector('.gain-loss'), gainLoss);
+
+            row.querySelector('.editStockButton').addEventListener('click', () => {
+                editStock(row, stockName, stockPrice, stockQuantity, buyPrice, totalValue, WACC);
+            });
+
+            row.querySelector('.deleteStockButton').addEventListener('click', () => {
+                stockTableBody.removeChild(row);
+                portfolioValue -= totalValue;
+                totalWACC -= WACC;
+                updatePortfolioValue();
+                updateProfitLoss();
+                stockCount--;
+                updateTableNumbers();
+            });
+        } else {
+            alert('Please enter stock name, price, quantity, and buy price.');
+        }
+    });
+
+    const editStock = (row, stockName, stockPrice, stockQuantity, buyPrice, totalValue, WACC) => {
+        const newStockName = prompt('Enter new stock name:', stockName);
+        const newStockPrice = parseFloat(prompt('Enter new stock price:', stockPrice));
+        const newStockQuantity = parseInt(prompt('Enter new stock quantity:', stockQuantity));
+        const newBuyPrice = parseFloat(prompt('Enter new buy price:', buyPrice));
+
+        if (newStockName && newStockPrice && newStockQuantity && newBuyPrice) {
+            const newTotalValue = newStockPrice * newStockQuantity;
+            const newWACC = newBuyPrice * newStockQuantity;
+            const newGainLoss = newWACC - newTotalValue;
+            const newGainLossPercentage = ((newGainLoss / newWACC) * 100).toFixed(2);
+
+            portfolioValue = portfolioValue - totalValue + newTotalValue;
+            totalWACC = totalWACC - WACC + newWACC;
+            updatePortfolioValue();
+            updateProfitLoss();
+
+            row.cells[1].textContent = newStockName;
+            row.cells[2].textContent = `Rs${newStockPrice.toFixed(2)}`;
+            row.cells[3].textContent = newStockQuantity;
+            row.cells[4].textContent = `Rs${newBuyPrice.toFixed(2)}`;
+            row.cells[5].textContent = `Rs${newTotalValue.toFixed(2)}`;
+            row.cells[6].textContent = `Rs${newWACC.toFixed(2)}`;
+            row.cells[7].innerHTML = `${newGainLoss.toFixed(2)} (${newGainLossPercentage}%)`;
+
+            updateGainLossColor(row.querySelector('.gain-loss'), newGainLoss);
+        } else {
+            alert('Please enter valid values.');
+        }
+    };
+
+    const updateTableNumbers = () => {
+        const rows = stockTableBody.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            rows[i].children[0].textContent = i + 1;
+        }
+    };
+
+    const updatePortfolioValue = () => {
+        portfolioValueElement.textContent = portfolioValue.toFixed(2);
+    };
+
+    const updateProfitLoss = () => {
+        const profitLoss = portfolioValue - totalWACC;
+        profitLossElement.textContent = Math.abs(profitLoss).toFixed(2);
+        profitLossDiv.textContent = profitLoss >= 0 ? `Profit: Rs${profitLoss.toFixed(2)}` : `Loss: Rs${Math.abs(profitLoss).toFixed(2)}`;
+        if (profitLoss >= 0) {
+            profitLossDiv.classList.remove('loss');
+            profitLossDiv.classList.add('profit');
+        } else {
+            profitLossDiv.classList.remove('profit');
+            profitLossDiv.classList.add('loss');
+        }
+    };
+
+    const updateGainLossColor = (element, gainLoss) => {
+        if (gainLoss >= 0) {
+            element.classList.remove('red');
+            element.classList.add('green');
+        } else {
+            element.classList.remove('green');
+            element.classList.add('red');
+        }
+    };
+});
+
+
+    </script>
+</body>
+</html>
